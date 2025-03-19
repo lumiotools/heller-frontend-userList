@@ -13,10 +13,12 @@ type LocaleContextType = {
   currentLanguage: Language | null
   setLanguage: (code: string) => void
   t: (key: string) => string
-  isLoading: boolean
 }
 
-const languages: Record<string, Language> = {
+// Define the valid language codes as a type
+type LanguageCode = keyof typeof translations
+
+const languages: Record<LanguageCode, Language> = {
   en: { code: "en", name: "English" },
   zh: { code: "zh", name: "Chinese" },
   hi: { code: "hi", name: "Hindi" },
@@ -31,41 +33,41 @@ const LocaleContext = createContext<LocaleContextType>({
   currentLanguage: null,
   setLanguage: () => {},
   t: (key: string) => key,
-  isLoading: false,
 })
 
 export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const [currentLanguage, setCurrentLanguage] = useState<Language | null>(languages.en)
-  const [isLoading, setIsLoading] = useState(false)
 
   // Initialize with English or browser language on client side
   useEffect(() => {
     try {
       const savedLanguage = localStorage.getItem("preferredLanguage")
       const languageCode = savedLanguage || "en"
-      setCurrentLanguage(languages[languageCode] || languages.en)
+      // Type guard to ensure languageCode is a valid key
+      if (isValidLanguageCode(languageCode)) {
+        setCurrentLanguage(languages[languageCode] || languages.en)
+      } else {
+        setCurrentLanguage(languages.en)
+      }
     } catch (error) {
-        console.log("Error", error as Error);
       // If localStorage is not available, default to English
       setCurrentLanguage(languages.en)
     }
   }, [])
 
-  const setLanguage = (code: string) => {
-    if (languages[code] && currentLanguage?.code !== code) {
-      setIsLoading(true)
+  // Type guard function to check if a string is a valid language code
+  function isValidLanguageCode(code: string): code is LanguageCode {
+    return code in translations
+  }
 
-      // Simulate loading delay for better UX
-      setTimeout(() => {
-        setCurrentLanguage(languages[code])
-        try {
-          localStorage.setItem("preferredLanguage", code)
-        } catch (error) {
-          // Ignore localStorage errors
-          console.log("Error", error as Error);
-        }
-        setIsLoading(false)
-      }, 300)
+  const setLanguage = (code: string) => {
+    if (isValidLanguageCode(code) && currentLanguage?.code !== code) {
+      setCurrentLanguage(languages[code])
+      try {
+        localStorage.setItem("preferredLanguage", code)
+      } catch (error) {
+        // Ignore localStorage errors
+      }
     }
   }
 
@@ -73,7 +75,11 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
   const t = (key: string): string => {
     if (!currentLanguage) return key
 
-    const langTranslations = translations[currentLanguage.code]
+    // Use type guard to ensure code is a valid key
+    const code = currentLanguage.code
+    if (!isValidLanguageCode(code)) return key
+
+    const langTranslations = translations[code]
     if (!langTranslations) return key
 
     return langTranslations[key] || translations.en[key] || key
@@ -83,7 +89,6 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     currentLanguage,
     setLanguage,
     t,
-    isLoading,
   }
 
   return <LocaleContext.Provider value={contextValue}>{children}</LocaleContext.Provider>
