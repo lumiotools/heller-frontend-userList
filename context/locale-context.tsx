@@ -1,24 +1,25 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
-import { translations } from "@/translations"
+import type { ReactNode } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { translations } from "@/translations";
 
 type Language = {
-  code: string
-  name: string
-}
+  code: string;
+  name: string;
+};
+
+// Define a type for translation keys based on what's available in English translations
+type TranslationKey = keyof typeof translations.en;
 
 type LocaleContextType = {
-  currentLanguage: Language | null
-  setLanguage: (code: string) => void
-  t: (key: string) => string
-}
+  currentLanguage: Language;
+  setLanguage: (code: string) => void;
+  t: (key: TranslationKey) => string;
+  isLoading: boolean;
+};
 
-// Define the valid language codes as a type
-type LanguageCode = keyof typeof translations
-
-const languages: Record<LanguageCode, Language> = {
+const languages: Record<string, Language> = {
   en: { code: "en", name: "English" },
   zh: { code: "zh", name: "Chinese" },
   hi: { code: "hi", name: "Hindi" },
@@ -26,75 +27,64 @@ const languages: Record<LanguageCode, Language> = {
   ko: { code: "ko", name: "Korean" },
   th: { code: "th", name: "Thai" },
   vi: { code: "vi", name: "Vietnamese" },
-}
+};
 
-// Create context with default values to prevent undefined errors
-const LocaleContext = createContext<LocaleContextType>({
-  currentLanguage: null,
-  setLanguage: () => {},
-  t: (key: string) => key,
-})
+// Provide a default value that matches the expected type
+const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 
-export function LocaleProvider({ children }: { children: React.ReactNode }) {
-  const [currentLanguage, setCurrentLanguage] = useState<Language | null>(languages.en)
+export function LocaleProvider({ children }: { children: ReactNode }) {
+  const [currentLanguage, setCurrentLanguage] = useState<Language>(languages.en);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Initialize with English or browser language on client side
   useEffect(() => {
     try {
-      const savedLanguage = localStorage.getItem("preferredLanguage")
-      const languageCode = savedLanguage || "en"
-      // Type guard to ensure languageCode is a valid key
-      if (isValidLanguageCode(languageCode)) {
-        setCurrentLanguage(languages[languageCode] || languages.en)
-      } else {
-        setCurrentLanguage(languages.en)
+      const savedLanguage = localStorage.getItem("preferredLanguage");
+      if (savedLanguage && languages[savedLanguage]) {
+        setCurrentLanguage(languages[savedLanguage]);
       }
     } catch (error) {
-      // If localStorage is not available, default to English
-      setCurrentLanguage(languages.en)
+      console.error("Error accessing localStorage:", error);
     }
-  }, [])
-
-  // Type guard function to check if a string is a valid language code
-  function isValidLanguageCode(code: string): code is LanguageCode {
-    return code in translations
-  }
+  }, []);
 
   const setLanguage = (code: string) => {
-    if (isValidLanguageCode(code) && currentLanguage?.code !== code) {
-      setCurrentLanguage(languages[code])
-      try {
-        localStorage.setItem("preferredLanguage", code)
-      } catch (error) {
-        // Ignore localStorage errors
-      }
+    if (languages[code] && currentLanguage.code !== code) {
+      setIsLoading(true);
+
+      setTimeout(() => {
+        setCurrentLanguage(languages[code]);
+
+        try {
+          localStorage.setItem("preferredLanguage", code);
+        } catch (error) {
+          console.error("Error setting localStorage:", error);
+        }
+
+        setIsLoading(false);
+      }, 300);
     }
-  }
+  };
 
-  // Translation function
-  const t = (key: string): string => {
-    if (!currentLanguage) return key
+  const t = (key: TranslationKey): string => {
+    const langCode = currentLanguage?.code || "en";
+    const langTranslations = translations[langCode as keyof typeof translations] ?? translations.en;
+    return langTranslations[key] ?? translations.en[key] ?? key;
+  };
 
-    // Use type guard to ensure code is a valid key
-    const code = currentLanguage.code
-    if (!isValidLanguageCode(code)) return key
-
-    const langTranslations = translations[code]
-    if (!langTranslations) return key
-
-    return langTranslations[key] || translations.en[key] || key
-  }
-
-  const contextValue = {
+  const contextValue: LocaleContextType = {
     currentLanguage,
     setLanguage,
     t,
-  }
+    isLoading,
+  };
 
-  return <LocaleContext.Provider value={contextValue}>{children}</LocaleContext.Provider>
+  return <LocaleContext.Provider value={contextValue}>{children}</LocaleContext.Provider>;
 }
 
 export const useLocale = () => {
-  return useContext(LocaleContext)
-}
-
+  const context = useContext(LocaleContext);
+  if (!context) {
+    throw new Error("useLocale must be used within a LocaleProvider");
+  }
+  return context;
+};

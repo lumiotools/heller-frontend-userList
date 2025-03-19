@@ -61,7 +61,7 @@ export default function Header() {
   }
 
   return (
-    <nav className="sticky top-0 z-50 w-full h-auto py-2 md:h-20 bg-[#011A2E] px-4 md:px-10 relative flex flex-wrap items-center justify-between md:justify-start font-montserrat shadow-md">
+    <nav className="sticky top-0 z-50 w-full h-auto py-4 md:py-2 md:h-20 bg-[#011A2E] px-4 md:px-10 relative flex flex-wrap items-center justify-between md:justify-start font-montserrat shadow-md">
       {/* Left section - Flags */}
       <div className="flex items-center gap-2 order-1">
         {flags.map((flag, index) => (
