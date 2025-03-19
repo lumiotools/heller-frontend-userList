@@ -3,6 +3,8 @@
 import { useRouter, usePathname } from "next/navigation"
 import { useEffect } from "react"
 import { useLocale } from "@/context/locale-context"
+import Link from "next/link"
+import { Settings } from "lucide-react"
 
 export default function Header() {
   const router = useRouter()
@@ -60,6 +62,8 @@ export default function Header() {
     setLanguage(languageCode)
   }
 
+  const isAdminPage = pathname.startsWith("/admin")
+
   return (
     <nav className="sticky top-0 z-50 w-full h-auto py-4 md:py-2 md:h-20 bg-[#011A2E] px-4 md:px-10 relative flex flex-wrap items-center justify-between md:justify-start font-montserrat shadow-md">
       {/* Left section - Flags */}
@@ -90,6 +94,19 @@ export default function Header() {
       {/* Center logo */}
       <div className="w-full md:w-auto md:absolute md:left-1/2 md:top-1/2 md:transform md:-translate-x-1/2 md:-translate-y-1/2 flex justify-center order-0">
         <img src="https://heller-proto-frontend.vercel.app/hellerLogo.png" alt="Heller Logo" className="w-24 md:w-28" />
+      </div>
+
+
+      <div className="order-2 ml-auto">
+        <Link
+          href="/admin"
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${
+            isAdminPage ? "bg-white/20 text-white" : "text-white/80 hover:text-white hover:bg-white/10"
+          }`}
+        >
+          <Settings size={18} />
+          <span className="hidden sm:inline">Admin</span>
+        </Link>
       </div>
     </nav>
   )
